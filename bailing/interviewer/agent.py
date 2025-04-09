@@ -58,7 +58,8 @@ class InterviewerAgent:
             "follow_up_count": 0,
             "completeness_score": 0,
             "key_points_covered": [],
-            "last_follow_up": None
+            "last_follow_up": None,
+            "last_action_type_for_this_index": None
         }
         # ADDED: Shared HTTP client for Ollama and potentially others
         # Consider increasing timeout if local models are slow
@@ -533,20 +534,22 @@ Task (Strictly adhere to the following steps to generate the output):
             - **REPETITIVE QUESTIONING AFTER CLEAR YES/NO IS *COMPLETELY, UTTERLY, AND UNACCEPTABLY PROHIBITED* FOR *ALL* ASSESSMENT QUESTIONS.**  (Generalized instruction - removed weight specific mention)
             - **<<< CLARIFICATION >>> Apply this rule primarily when the clear Yes/No directly answers the *entire* core inquiry of the question or the *only remaining part* after a follow-up.** If it answers only one part of a multi-part question, prefer step 3c/follow-up for the missing parts.
 
-    3. **Decide Next Action (Provide ultra-concise reasoning):**
-       - **IMPORTANT: Be aware that we can ask at most 3 follow-up questions for a single topic. If follow_up_count >= 2, seriously consider moving on unless absolutely necessary to ask one final follow-up.**
-       a) **IF Sentiment is Positive or Neutral AND Content Assessment is Yes AND completeness < 80 AND response is *TRULY, UTTERLY, AND UNQUESTIONABLY* BRIEF ...:** # (保持不变) [DECIDE follow_up, RESPONSE: general probe]
-       b) **IF Sentiment is Positive or Neutral AND Content Assessment is Yes AND completeness >= 80:** # (保持不变) [DECIDE move_on, RESPONSE: short transition]
-       c) **<<< MODIFIED >>> IF Content Assessment is Partially AND completeness < 80 AND follow_up_count < 3:**
-          - **DECIDE `follow_up`.** Your primary goal is to get the missing information identified in the assessment (Step 1).
-          - **Generate a SPECIFIC follow-up question in RESPONSE** targeting ONLY the missing part(s). Do NOT repeat the parts already answered.
-          - **Example:** If original Q was "Cause and need help?" and user only answered "need help", RESPONSE should be like: "明白了您觉得不需要帮助。那您觉得引起这些问题的原因可能是什么呢？"
-       d) **IF Sentiment is Negative or Abusive:** # (保持不变) [DECIDE de_escalate, RESPONSE: de-escalation statement]
-       e) **IF Sentiment is Threatening:** # (保持不变) [DECIDE move_on, RESPONSE: safety note/end]
-       f) **<<< MODIFIED >>> IF Content Assessment is No (Irrelevant Response) AND follow_up_count < 3:**
-          - **Check Conversation History:** Has a `redirect` for this *exact same* question been issued in the immediately preceding turn?
-             - **If YES:** DO NOT `redirect` again. Instead, **DECIDE `follow_up`** with a very simple clarifying question (e.g., "您能换种方式说说您的想法吗？", "我还是不太确定您的意思，可以再解释一下吗？") or, if this also fails, consider rule 6.
-             - **If NO:** **DECIDE `redirect`.** Generate a polite redirection statement in RESPONSE, reminding the participant of the topic. Set Completeness score very low (0-10). (Examples remain the same).
+    3. **Decide Next Action (Provide clear reasoning based on content and sentiment):**
+       a) **If Sentiment is Positive or Neutral AND Content Assessment is Yes or Partially AND completeness < 80:** Generate a specific and targeted follow-up question (as per previous instructions), **focusing on gently exploring contributing factors to the positive sentiment or seeking further clarification on specific aspects if the initial answer was brief (e.g., "很高兴听到您最近好多了。能简单说说是什么让您感觉好转了吗？"). Avoid phrasing that introduces potential negative counterpoints immediately after a positive statement.**
+       b) **If Sentiment is Positive or Neutral AND Content Assessment is Yes AND completeness >= 80:** Move to the next question (as per previous instructions).
+       c) **If Sentiment is Negative or Abusive:**
+          - **Reasoning:** The participant is expressing negative emotions or using abusive language, which needs to be addressed.
+          - **RESPONSE:**  Acknowledge the emotion without condoning the abuse. Use empathetic and de-escalating language. Examples: "I understand you're feeling upset. Can you tell me what's making you feel this way?", "I hear that you're feeling angry. My goal is to understand your mood. Perhaps we can try to focus on the questions about that?", "I understand you might be frustrated, but using abusive language isn't helpful. Can we try to talk about how you've been feeling lately?". **Do NOT thank the participant for abusive responses.**
+       d) **If Sentiment is Threatening:**
+          - **Reasoning:** The participant has made a threatening statement, which requires a different approach.
+          - **RESPONSE:**  Prioritize safety. Acknowledge the statement seriously but avoid escalating. Examples: "I understand you're feeling intense emotions. I want to assure you that this is a safe space.",  "I'm concerned by your statement. It's important to remember that we're here to help you." **Consider a predetermined protocol for ending the interaction if threats persist.**
+       e) **If Content Assessment is No (Irrelevant Response):**
+          - **Reasoning:** The participant's response does not address the question.
+          - **RESPONSE:** Gently redirect the participant back to the question. Examples: "Thank you. To help me understand [mention the topic of the HAMD question], could you tell me more about that?", "I appreciate your sharing, but let's get back to the question about [mention the topic of the HAMD question].", "It seems like that's not quite related to what I was asking. Could you tell me about [rephrase the HAMD question]?".
+       f) **<<< CRITICAL: HANDLE REPEATED IRRELEVANCE >>> IF Content Assessment is No (Irrelevant Response) AND follow_up_count < 3:**
+          - **Check AI's LAST response in history:** Was the *very last thing the AI said* a redirection attempt for the *current* question ID ({question.get('id', 'N/A')})?
+          - **If YES (AI just redirected):** DO NOT output `redirect` again. Instead, **MUST output `DECISION: follow_up`**. The `RESPONSE` should be a simple clarification like "抱歉，我还是想了解一下您最近的心情怎么样？" or "我们能回到关于您心情的问题吗？".
+          - **If NO (AI did not just redirect):** **MUST output `DECISION: redirect`**. Generate a polite redirection statement in RESPONSE, reminding the participant of the topic: "{question.get('question', '...')}". Set Completeness score very low (0-10).
        g) **IF follow_up_count >= 2:** # (保持不变, 但现在也适用于重定向失败多次的情况) [DECIDE move_on, RESPONSE: short transition]
 
     4. **Follow-up Questions (If *absolutely* and *unquestionably* chosen - RARE):** (Follow previous instructions). **ENSURE follow-ups are *TRULY, UTTERLY, AND UNQUESTIONABLY NECESSARY* to confirm symptom presence/absence.  *AGGRESSIVELY AVOID* UNNECESSARY PROBING OR QUANTIFICATION when *any* clear indication already exists.**
@@ -558,7 +561,11 @@ Task (Strictly adhere to the following steps to generate the output):
             - **DECIDE `move_on`.**
             - **Reasoning:** State that attempts to redirect or clarify have been unsuccessful, and continuing is unproductive.
             - **RESPONSE:** Generate a neutral statement indicating you need to move on. Example: "我理解您现在可能不太想回答这个问题，我们先跳过这个问题，继续下一个吧。", "看来这个问题我们暂时无法深入讨论，那我们先进行下一个问题。"
-    7. If there is no historical record in front, that is, this is an opening speech, then there is no need to check the satisfaction of the user's answer. **For the opening question, focus on a broad and open-ended inquiry about the interviewee's current emotional state, avoiding overly specific or leading questions. Keep the opening brief and welcoming.** The opening speech does not need to obtain any user information and directly start the first question.
+    7. **Special Rule for Opening Turn:** IF this is the very first user response in the interview (check conversation history length, e.g., <= 2 turns total including the initial greeting), THEN treat the `Current question` as the opening instruction/greeting. In this specific scenario:
+    *   **IGNORE the `Participant's response` content** for evaluation purposes (unless clearly abusive, threatening, or explicitly refusing to continue). Assume acknowledgment or consent.
+    *   **MUST output `DECISION: move_on`**.
+    *   Set `COMPLETENESS: 100`.
+    *   The `RESPONSE` field MUST contain ONLY a very brief, neutral transition phrase to the first real question (e.g., "好的，我们开始吧。", "嗯，谢谢，第一个问题是：", "了解。"). **ABSOLUTELY DO NOT** repeat the opening speech in the RESPONSE.
     8. Avoid repetitive or overly broad requests for more details
     • If the patient has already answered the main aspects of the question, do not repeat broad questions such as "Can you tell me more?"
     • If key information is still missing, please use a short, focused question directly to address the missing part to avoid asking the patient to repeat what has already been said.
@@ -577,7 +584,7 @@ Format your response as:
     RESPONSE: [
         **IF DECISION is 'move_on':** Provide ONLY an EXTREMELY SHORT and natural transition phrase (e.g., "好的。", "明白了。", "嗯，我们继续。"). ABSOLUTELY DO NOT include the next question's text here.
         **IF DECISION is 'follow_up':** Provide the SPECIFIC, targeted follow-up question based on the missing information identified in REASONING.
-        **IF DECISION is 'redirect':** Provide the polite and concise redirection statement, focusing on the current question.
+        **IF DECISION is 'redirect':** Provide the polite and concise redirection statement, focusing on the current question,don't repeat the question.
         **IF DECISION is 'de_escalate':** Provide the appropriate de-escalation statement.
     ]
         """ # Note: Added 'None' option for KEY_POINTS_COVERED as per modified prompt example
@@ -785,34 +792,45 @@ Format your response as:
     # --- ORIGINAL: _determine_next_action ---
     # (Reverted to original logic flow, added transition sanitization)
     async def _determine_next_action(self, decision: str) -> Dict:
-        """Determine the next action based on the decision string from LLM."""
+        """Determine the next action based on the decision string from LLM.
+           Restored original logic for move_on: Ignores LLM RESPONSE field for transitions.
+        """
         try:
             completeness_threshold = 80
             decision_type = ""
-            response_text = "" # The text LLM generated in RESPONSE field
+            response_text = "" # The text LLM generated in RESPONSE fieldwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
             move_to_next = False # Flag to indicate moving to the next script question
 
-            # --- Parsing Logic (using robust parsing from modified version) ---
+            # --- Parsing Logic (using robust parsing) ---
             import re
-            decision_match = re.search(r"DECISION:\s*(\w+)", decision, re.IGNORECASE)
+            # Use lower() on the decision string once for case-insensitive matching
+            decision_lower = decision.lower()
+
+            decision_match = re.search(r"decision:\s*(\w+)", decision_lower)
             if decision_match:
-                decision_type = decision_match.group(1).strip().lower()
+                # Keep the parsed type lower case for consistent comparisons
+                decision_type = decision_match.group(1).strip()
             else:
                 logging.warning("Could not parse DECISION from LLM response. Defaulting to follow_up.")
                 decision_type = "follow_up"
 
-            response_match = re.search(r"RESPONSE:(.*)", decision, re.DOTALL | re.IGNORECASE)
+            # Parse the original case RESPONSE text
+            response_match = re.search(r"response:(.*)", decision, re.DOTALL | re.IGNORECASE)
             if response_match:
                 response_text = response_match.group(1).strip()
             else:
                 logging.warning("Could not parse RESPONSE from LLM response.")
-                # Provide default response based on decision type if needed (as per modified)
+                # Provide default response based on decision type if needed
                 if decision_type == "follow_up":
                     response_text = "您能再详细说明一下吗？"
                 elif decision_type == "redirect":
-                     response_text = "我们好像稍微偏离了当前的话题，我们能回到刚才的问题吗？"
-                elif decision_type == "move_on":
-                     response_text = "好的。" # Default short transition
+                     # Get current question text for better default redirect
+                     current_q_text = "刚才的问题"
+                     if self.current_question_index < len(self.script):
+                          current_q_text = self.script[self.current_question_index].get("question", current_q_text)
+                     response_text = f"我们好像稍微偏离了当前的话题，我们能回到{current_q_text}吗？"
+                # No default needed for move_on as it's handled later
+                # No default needed for de_escalate as it should ideally be provided
 
             completeness_score = self.current_question_state.get("completeness_score", 0)
             follow_up_count = self.current_question_state.get("follow_up_count", 0)
@@ -820,153 +838,153 @@ Format your response as:
             logging.info(f"LLM Decision Parsed: Type='{decision_type}', Completeness={completeness_score}, Follow-ups={follow_up_count}")
             logging.debug(f"LLM Response Text Parsed: '{response_text[:100]}...'")
 
-            # --- Original Core Decision Logic Flow ---
+            # --- Core Decision Logic Flow (Restoring v_old's move_on handling) ---
             final_response = "" # The response the agent should actually say
 
-            # 1. Check for maximum follow-ups reached (Original Logic)
+            # 1. Check for maximum follow-ups reached
             if follow_up_count >= 3:
                 logging.info("Maximum follow-up count (3) reached. Forcing move_on.")
                 move_to_next = True
-                # Original didn't explicitly set response_text here,
-                # it relied on the move_to_next block below.
+                # No need to set final_response here, handled in move_to_next block
 
-            # 2. Process LLM decision if max follow-ups not reached (Original Logic)
-            #    The original code had a slightly complex structure here. Let's simplify
-            #    while preserving the outcome based on the parsed decision_type.
+            # 2. Process LLM decision if max follow-ups not reached
             elif decision_type == "move_on":
-                 # Original code checked completeness score here. Let's re-add that check.
                  if completeness_score >= completeness_threshold:
                       move_to_next = True
                       logging.info("LLM decided move_on and completeness is sufficient.")
                  else:
-                      # Original code logged a warning and forced move_on. Let's replicate.
                       logging.warning(f"LLM decided move_on but completeness ({completeness_score}) is below threshold ({completeness_threshold}). Forcing move_on.")
                       move_to_next = True
-                 # We will handle the actual response text generation in the move_to_next block
+                 # No need to set final_response here, handled in move_to_next block
 
             elif decision_type == "follow_up":
-                 move_to_next = False
-                 final_response = response_text # Use LLM's generated follow-up
-                 logging.info("LLM decided follow_up.")
-                 if not final_response: # Add default if LLM failed to provide text
-                      logging.warning("LLM decided follow_up but provided no RESPONSE text. Using default.")
-                      final_response = "关于刚才提到的，您能再说详细一点吗？"
+                if completeness_score >= completeness_threshold:
+                      logging.warning(f"LLM decided follow_up but completeness ({completeness_score}) >= threshold ({completeness_threshold}). Overriding to move_on.")
+                      move_to_next = True # Override decision: move on instead of follow up
+                      # No need to set final_response here, it will be handled by the move_to_next block below
+                else:
+                      # Original follow_up logic if score is below threshold
+                      move_to_next = False
+                      final_response = response_text # Use LLM's generated follow-up
+                      logging.info("LLM decided follow_up and completeness is below threshold.")
+                      if not final_response:
+                           logging.warning("LLM decided follow_up but provided no RESPONSE text. Using default.")
+                           final_response = "关于刚才提到的，您能再说详细一点吗？"
 
             elif decision_type == "redirect":
-                 move_to_next = False
-                 final_response = response_text # Use LLM's generated redirect
-                 logging.info("LLM decided redirect.")
-                 if not final_response: # Add default
-                      logging.warning("LLM decided redirect but provided no RESPONSE text. Using default.")
-                      # Include current question for context in default redirect
-                      current_q_text = self.script[self.current_question_index].get("question", "")
-                      final_response = f"抱歉，我们稍微回到刚才的问题上：{current_q_text}"
+                 # Check agent-side state to prevent redirect loops (Added Safeguard)
+                 last_action = self.current_question_state.get("last_action_type_for_this_index")
+                 if last_action == "redirect":
+                      logging.warning(f"LLM suggested redirect, but last action for index {self.current_question_index} was also redirect. Overriding to follow_up clarification.")
+                      decision_type = "follow_up" # Override the decision type
+                      original_question = self.script[self.current_question_index].get("question", "刚才的问题")
+                      final_response = f"抱歉，我们还是回到刚才关于您的问题上：{original_question}"
+                      move_to_next = False
+                 else:
+                      # Proceed with redirect if it's the first time
+                      move_to_next = False
+                      final_response = response_text # Use LLM's generated redirect
+                      logging.info("LLM decided redirect.")
+                      if not final_response:
+                           logging.warning("LLM decided redirect but provided no RESPONSE text. Using default.")
+                           current_q_text = self.script[self.current_question_index].get("question", "刚才的问题")
+                           final_response = f"抱歉，我们稍微回到{current_q_text}上。"
 
             elif decision_type == "de_escalate":
                  move_to_next = False
                  final_response = response_text # Use LLM's generated de-escalation
                  logging.info("LLM decided de_escalate.")
-                 if not final_response: # Add default
+                 if not final_response:
                       logging.warning("LLM decided de_escalate but provided no RESPONSE text. Using default.")
                       final_response = "听起来您似乎有些不适，没关系，我们可以慢慢来。"
 
             else: # Unknown decision type or parsing failed earlier
                  logging.error(f"Unknown or unparsed DECISION type: '{decision_type}'. Defaulting to follow_up.")
                  move_to_next = False
-                 # Use the default follow-up from the original error path
+                 decision_type = "follow_up" # Treat as follow_up for state update
                  final_response = "抱歉，我需要稍微调整一下思路。您能就刚才的问题再多说一点吗？"
 
 
-            # --- Perform Action Based on move_to_next Flag (Original Logic Flow) ---
+            # --- Perform Action Based on move_to_next Flag ---
             if move_to_next:
                 self.current_question_index += 1
                 logging.info(f"Moving to next question index: {self.current_question_index}")
 
-                # Check if interview ended (Original Logic)
+                # Check if interview ended
                 if self.current_question_index >= len(self.script):
                     logging.info("Reached end of script.")
-                    # Original code returned a specific farewell message here
-                    final_response = "感谢您的参与！我们已经完成了所有问题。" # Use original end message
-                    # Return structure should match what generate_next_action expects
+                    # Use the specific farewell message from the original working version
+                    final_response = "感谢您的参与！我们已经完成了所有问题。"
+                    # Update state for the *last* action before returning
+                    self.current_question_state["last_action_type_for_this_index"] = "move_on" # Or 'end'
                     return {
                         "response": final_response,
-                        "move_to_next": True, # Technically moved past last question
-                        # is_interview_complete is added by generate_next_action, but set True here for clarity
-                        "is_interview_complete": True
+                        "move_to_next": True,
+                        "is_interview_complete": True # Mark as complete here
                     }
                 else:
-                    # Get the *next* question from the script (Original Logic)
+                    # Get the *next* question from the script
                     next_question_data = self.script[self.current_question_index]
-                    original_next_question = next_question_data.get("question", "") # Use .get for safety
+                    original_next_question = next_question_data.get("question", "")
                     if not original_next_question:
                          logging.error(f"Next question at index {self.current_question_index} has no text!")
-                         # Handle error - maybe skip or use a default? Original didn't specify.
-                         # For now, return an error response.
+                         # Update state before returning error
+                         self.current_question_state["last_action_type_for_this_index"] = "error"
                          return self._create_error_response(f"Script error: Question at index {self.current_question_index} is empty.")
 
                     logging.info(f"Next script question: '{original_next_question[:50]}...'")
 
-                    # Generate natural version of the *next* question (Original Logic)
+                    # Generate natural version of the *next* question
                     natural_next_question = await self._generate_natural_question(original_next_question)
 
-                    # --- ADDED: Sanitize transition phrase ---
-                    # Use the response_text parsed earlier if decision was move_on, otherwise default.
-                    llm_transition = response_text if decision_type == "move_on" else ""
-                    valid_transition = ""
-                    if llm_transition and len(llm_transition) < 25 and '？' not in llm_transition and '?' not in llm_transition:
-                         # Allow slightly longer transitions but check for questions
-                        valid_transition = llm_transition
-                        # Add punctuation if needed
-                        if not valid_transition.endswith(("。", "！", "!", ".", "？", "?")):
-                            valid_transition += "。"
-                    else:
-                        if llm_transition: # Log if we discard a bad transition
-                            logging.warning(f"Invalid or long transition from LLM for move_on: '{llm_transition}'. Using default.")
-                        valid_transition = "好的。" # Default short transition
-
-                    # Combine validated transition + next natural question
+                    # *** KEY CHANGE: Set final response DIRECTLY to the next natural question ***
+                    # *** This restores the original working logic and ignores LLM's response_text for move_on ***
                     final_response = natural_next_question
-                    # -----------------------------------------
+                    # **************************************************************************
 
-                    # Reset state for the new question (Original Logic)
+                    # Reset state for the new question
                     self.current_question_state = {
                         "follow_up_count": 0,
                         "completeness_score": 0,
                         "key_points_covered": [],
-                        "last_follow_up": None
+                        "last_follow_up": None,
+                        "last_action_type_for_this_index": None # Reset for new question
                     }
                     logging.info("Reset question state for the new question.")
 
                     # Return structure expected by generate_next_action
+                    # Update state for the *current* action (which was move_on) before returning
+                    # Note: We update the *previous* index's state conceptually here before returning the *next* question
+                    # It might be cleaner to update state *after* the call in generate_next_action,
+                    # but let's keep it here for now based on structure.
+                    # self.current_question_state["last_action_type_for_this_index"] = "move_on" # This state is reset above, update is tricky here. Let's update in _update_question_state instead.
+
                     return {
                         "response": final_response,
-                        "move_to_next": True # Indicate we moved to a new script question
+                        "move_to_next": True
                     }
             else:
                 # Not moving to the next script question (follow_up, redirect, de_escalate)
-                # The final_response was already set based on the decision type
-                if not final_response: # Safety check if somehow final_response is empty
+                if not final_response: # Safety check
                     logging.error("final_response is empty in non-move_on scenario. Returning error.")
+                    self.current_question_state["last_action_type_for_this_index"] = "error"
                     return self._create_error_response("Internal error determining response.")
+
+                # Update state for the action taken
+                self.current_question_state["last_action_type_for_this_index"] = decision_type
 
                 # Return structure expected by generate_next_action
                 return {
                     "response": final_response,
-                    "move_to_next": False # Indicate we are staying on the same script question
+                    "move_to_next": False
                 }
 
         except Exception as e:
             logging.exception(f"Error in _determine_next_action: {str(e)}")
-            # Use the original error response helper
+            # Update state before returning error
+            if hasattr(self, 'current_question_state'): # Check if state exists
+                 self.current_question_state["last_action_type_for_this_index"] = "error"
             return self._create_error_response(f"Internal error in _determine_next_action: {str(e)}")
-
-
-    # --- ORIGINAL: _check_for_similar_questions ---
-    # (Keeping commented out as per original)
-    def _check_for_similar_questions(self, new_question: str) -> bool:
-        # """检查新问题是否与最近的机器人问题相似"""
-        # ... (original commented code) ...
-        return False
 
     # --- ORIGINAL: _create_error_response ---
     def _create_error_response(self, error_msg: str) -> Dict:

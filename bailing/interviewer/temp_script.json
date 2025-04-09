@@ -2,144 +2,163 @@
   "questions": [
     {
       "id": "greeting",
-      "question": "您好，张先生，很高兴今天能和您聊聊。根据您提供的信息，我了解到您的一些情况。为了更好地了解您的情绪和整体状态，接下来我会问您一些问题，这些问题都是想更深入地了解您最近一周左右的感受，请您轻松地告诉我您的想法就可以了，不用有压力，我也会认真倾听，可以吗？",
+      "question": "您好，梁非凡，很高兴今天能和您聊聊。根据您提供的信息，我了解到您今年22岁。为了更好地了解您的情绪和整体状态，接下来我会问您一些问题，这些问题都是想更深入地了解您最近一周左右的感受，请您轻松地告诉我您的想法就可以了，不用有压力，我也会认真倾听，可以吗？",
       "type": "instruction"
     },
     {
       "id": "emotional_state",
-      "question": "最近一段时间，您感觉自己的情绪怎么样？有没有觉得特别低落、沮丧，或者对什么事情都提不起兴趣？",
+      "question": "最近这段时间，您觉得心情怎么样？有没有什么特别让您感到开心或者困扰的事情？",
       "type": "open_ended",
       "expected_topics": [
         "depressed_mood",
+        "anxiety"
+      ],
+      "follow_up_questions": [
+        "您说的“困扰”具体是指什么呢？",
+        "这种情绪持续了多久了？",
+        "您觉得这种情绪对您的生活有什么影响吗？"
+      ]
+    },
+    {
+      "id": "interest_work",
+      "question": "平时您喜欢做些什么事情呢？对什么比较感兴趣？工作或者学习方面，您觉得怎么样？",
+      "type": "open_ended",
+      "expected_topics": [
+        "work_and_interest",
         "loss_of_interest"
       ],
       "follow_up_questions": [
-        "能具体说说是什么让您感到低落吗？",
-        "您觉得这种低落感持续了多久？",
-        "有没有什么事情能稍微缓解您的情绪？"
+        "您说的“不太提起兴趣”是指什么呢？",
+        "您觉得这种变化是什么时候开始的？",
+        "您觉得这种变化对您的生活有什么影响吗？"
       ]
     },
     {
-      "id": "guilt_feelings",
-      "question": "最近有没有觉得特别自责或者内疚？哪怕是一些小事，也觉得是自己的错？",
+      "id": "sleep",
+      "question": "最近您的睡眠怎么样？有没有入睡困难、睡不踏实或者早醒的情况？",
       "type": "open_ended",
       "expected_topics": [
-        "guilt_feelings"
+        "insomnia_early",
+        "insomnia_middle",
+        "insomnia_late"
       ],
       "follow_up_questions": [
-        "能具体说说您觉得内疚的事情是什么吗？",
-        "这种内疚感对您有什么影响？",
-        "您觉得这种感觉是合理的吗？"
+        "您通常几点入睡？",
+        "您觉得睡眠质量如何？",
+        "早醒的话，一般会早醒多久呢？"
       ]
     },
     {
-      "id": "suicidal_thoughts",
-      "question": "有时候，生活可能会让人感到很艰难。您最近有没有过一些不好的想法，或者觉得人生没有希望？",
+      "id": "weight_loss",
+      "question": "最近的食欲怎么样？体重有没有什么变化？",
       "type": "open_ended",
       "expected_topics": [
-        "suicidal_ideation"
-      ],
-      "follow_up_questions": [
-        "如果可以的话，能详细说说您的想法吗？",
-        "您有没有想过要伤害自己？",
-        "您有没有觉得有人可以帮助您？"
-      ]
-    },
-    {
-      "id": "sleep_disturbances",
-      "question": "最近一段时间，您的睡眠怎么样？有没有觉得入睡困难、容易醒来、或者早上醒得特别早？",
-      "type": "open_ended",
-      "expected_topics": [
-        "insomnia",
-        "early_morning_awakening",
-        "sleep_quality"
-      ],
-      "follow_up_questions": [
-        "您通常需要多长时间才能入睡？",
-        "您晚上醒来几次？",
-        "您觉得睡眠质量怎么样？"
-      ]
-    },
-    {
-      "id": "work_and_interests",
-      "question": "最近您对工作、学习或者平时感兴趣的事情，感觉怎么样？有没有觉得提不起兴趣，或者觉得很吃力？",
-      "type": "open_ended",
-      "expected_topics": [
-        "loss_of_interest",
-        "difficulty_concentrating"
-      ],
-      "follow_up_questions": [
-        "以前您喜欢做些什么？",
-        "现在您还有精力去做这些事情吗？",
-        "您觉得是什么原因导致您对这些事情失去兴趣？"
-      ]
-    },
-    {
-      "id": "psychomotor_retardation",
-      "question": "您有没有觉得自己的反应变得迟钝，或者行动起来比较慢？",
-      "type": "open_ended",
-      "expected_topics": [
-        "psychomotor_retardation"
-      ],
-      "follow_up_questions": [
-        "您觉得自己的思维速度有没有变慢？",
-        "您有没有觉得自己的身体很笨重？",
-        "这种迟钝感对您的日常生活有什么影响？"
-      ]
-    },
-    {
-      "id": "agitation",
-      "question": "您有没有觉得特别烦躁不安，或者坐立不安？",
-      "type": "open_ended",
-      "expected_topics": [
-        "agitation"
-      ],
-      "follow_up_questions": [
-        "您觉得是什么原因让您感到烦躁？",
-        "您通常通过什么方式来缓解这种烦躁？",
-        "这种烦躁感对您的日常生活有什么影响？"
-      ]
-    },
-    {
-      "id": "physical_symptoms",
-      "question": "最近您有没有感到身体不舒服，比如食欲不振、体重下降、或者感到疲劳？",
-      "type": "open_ended",
-      "expected_topics": [
-        "appetite_changes",
         "weight_loss",
-        "fatigue"
+        "appetite"
       ],
       "follow_up_questions": [
-        "您的食欲有没有发生明显变化？",
-        "您最近体重有没有下降？",
-        "您每天都感到疲劳吗？"
+        "您觉得食欲和以前相比，有什么变化吗？",
+        "体重大概减轻了多少呢？",
+        "您觉得体重变化和食欲有关系吗？"
       ]
     },
     {
-      "id": "concentration_difficulties",
-      "question": "您有没有觉得注意力难以集中，或者容易分心？",
+      "id": "somatic_symptoms",
+      "question": "除了情绪上的变化，身体上有没有什么不舒服的地方？比如，感到疲惫、头痛、或者其他不舒服的症状？",
       "type": "open_ended",
       "expected_topics": [
-        "difficulty_concentrating"
+        "somatic_symptoms_gastrointestinal",
+        "somatic_symptoms_general"
       ],
       "follow_up_questions": [
-        "您觉得是什么原因导致您注意力难以集中？",
-        "您在工作或者学习的时候，能集中注意力多久？",
-        "这种注意力难以集中对您的日常生活有什么影响？"
+        "您说的“疲惫”是指什么呢？",
+        "这些不舒服的症状，一般持续多久？",
+        "这些症状对您的生活有什么影响吗？"
       ]
     },
     {
-      "id": "self_worth",
-      "question": "您觉得自己是一个有价值的人吗？最近有没有觉得自己很糟糕，或者对未来感到绝望？",
+      "id": "anxiety",
+      "question": "您最近有没有感到特别紧张、焦虑，或者坐立不安的时候？",
       "type": "open_ended",
       "expected_topics": [
-        "feelings_of_worthlessness"
+        "psychic_anxiety",
+        "somatic_anxiety"
       ],
       "follow_up_questions": [
-        "您觉得是什么让您觉得自己很糟糕？",
-        "您对未来有什么样的期望？",
-        "您觉得有什么可以帮助您重新找回自信？"
+        "您说的“紧张”具体是指什么呢？",
+        "这种紧张感通常持续多久？",
+        "您觉得是什么原因引起的呢？"
       ]
+    },
+    {
+      "id": "self_harm",
+      "question": "您有没有觉得活得很累，或者对未来感到绝望？有没有想过伤害自己或者结束自己的生命？",
+      "type": "open_ended",
+      "expected_topics": [
+        "suicidal_thoughts"
+      ],
+      "follow_up_questions": [
+        "您这种想法持续了多久了？",
+        "您有没有具体的计划？",
+        "您觉得是什么原因让您产生这种想法的呢？"
+      ]
+    },
+    {
+      "id": "guilt",
+      "question": "最近有没有因为一些事情而感到内疚或者自责？",
+      "type": "open_ended",
+      "expected_topics": [
+        "guilt"
+      ],
+      "follow_up_questions": [
+        "您因为什么事情感到内疚呢？",
+        "这种内疚感有多强烈？",
+        "您觉得这种内疚感对您的生活有什么影响吗？"
+      ]
+    },
+    {
+      "id": "irritability",
+      "question": "您最近容易发脾气吗？或者比平时更容易感到烦躁？",
+      "type": "open_ended",
+      "expected_topics": [
+        "irritability"
+      ],
+      "follow_up_questions": [
+        "您发脾气的频率高吗？",
+        "通常因为什么事情发脾气？",
+        "您觉得发脾气对您的生活有什么影响吗？"
+      ]
+    },
+    {
+      "id": "libido",
+      "question": "您最近对性方面的兴趣怎么样？",
+      "type": "open_ended",
+      "expected_topics": [
+        "sexual_interest"
+      ],
+      "follow_up_questions": [
+        "您觉得和以前相比，有什么变化吗？",
+        "这种变化持续多久了？",
+        "您觉得是什么原因引起的呢？"
+      ]
+    },
+    {
+      "id": "hypochondriasis",
+      "question": "您最近有没有特别担心自己的健康问题？或者觉得身体不舒服，但检查又没有什么问题？",
+      "type": "open_ended",
+      "expected_topics": [
+        "hypochondriasis"
+      ],
+      "follow_up_questions": [
+        "您具体担心什么健康问题呢？",
+        "您为此做过什么检查吗？结果怎么样？",
+        "这种担心对您的生活有什么影响吗？"
+      ]
+    },
+    {
+      "id": "closing_instruction",
+      "question": "非常感谢您的配合和坦诚分享，所有的问题都已经问完了。您的回答对我了解您的状况非常有帮助，再次感谢您抽出时间与我交流。",
+      "type": "instruction"
     }
   ]
 }

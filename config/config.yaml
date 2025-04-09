@@ -49,7 +49,7 @@ LLM:
     api_key: ""
 
 llm:
-  provider: ollama # Based on selected_module.LLM = OpenAILLM
+  provider: openai # Based on selected_module.LLM = OpenAILLM
   openai:
     # Using values from LLM:OpenAILLM section
     api_key: "sk-CXXoCNboW8t7jhL7KfrPZ8SkQ1XrU2Qv7KVCr1UT7S7ILorR" 
