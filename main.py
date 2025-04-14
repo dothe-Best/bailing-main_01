@@ -8,6 +8,8 @@ import socket
 import time
 from bailing.utils import  read_config
 import requests  # 添加 requests 库导入
+from bailing import tts
+
 # 配置日志记录系统
 # 日志将同时输出到控制台和文件，便于调试和追踪
 logging.basicConfig(
@@ -19,16 +21,14 @@ logging.basicConfig(
     ]
 )
 
-# 设置各种日志级别为 WARNING，抑制不必要的日志输出
-logging.getLogger('httpx').setLevel(logging.WARNING)
-logging.getLogger('httpcore.http11').setLevel(logging.WARNING)
-logging.getLogger('openai._base_client').setLevel(logging.WARNING)
 
 # 导入项目自定义模块
 from bailing import robot
 
 # 获取当前模块的日志记录器
 logger = logging.getLogger(__name__)
+
+open_text="这是一段开场白，在main文件中被创建的。"
 
 def load_config():
     """
@@ -38,7 +38,7 @@ def load_config():
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-def upload_video_to_web(config, web_url="https://127.0.0.1:5001", max_retries=3):
+def upload_video_to_web(config, web_url="https://127.0.0.1:5000", max_retries=3):
     """
     将视频文件上传到Web服务器，带有重试机制和详细的错误处理
 
@@ -50,6 +50,11 @@ def upload_video_to_web(config, web_url="https://127.0.0.1:5001", max_retries=3)
     Returns:
         str or None: 上传成功返回视频URL，失败返回None
     """
+    logger.info("TTS 创建成功")
+    tts_tts = tts.create_instance(
+            config["selected_module"]["TTS"],
+            config["TTS"][config["selected_module"]["TTS"]]
+    )
     video_path = config['system']['initialization_video']['path']
     retry_count = 0
     retry_delay = 2  # 初始重试延迟（秒）
@@ -82,6 +87,12 @@ def upload_video_to_web(config, web_url="https://127.0.0.1:5001", max_retries=3)
         try:
             logger.info(f"尝试上传视频 (第{retry_count + 1}次)")
             
+            #TTS
+            open_audio = tts_tts.to_tts(open_text)
+            logger.info(open_audio)
+            logger.info(f"开场白TTS完成")
+            logger.info(f"开场白TTS文件:{open_audio}")
+            
             # 设置超时和重试参数
             with open(video_path, "rb") as video_file:
                 files = {"video": video_file}
@@ -96,6 +107,21 @@ def upload_video_to_web(config, web_url="https://127.0.0.1:5001", max_retries=3)
             if response.status_code == 200:
                 video_url = response.json().get("url")
                 logger.info(f"视频文件上传成功，URL: {video_url}")
+                
+                push2web({
+                "role": "assistant", 
+                "type": "text",
+                "content": open_text,
+                "need_confirm":False
+                })
+                logger.info(f"开场白推送完成")
+                push2web({
+                    "role": "assistant",
+                    "type": "audio",
+                    "content": open_audio,
+                    "need_confirm":False
+                })
+
                 return video_url
             else:
                 logger.warning(f"上传失败 (尝试 {retry_count + 1}/{max_retries}): HTTP {response.status_code} - {response.text}")
@@ -119,7 +145,7 @@ def upload_video_to_web(config, web_url="https://127.0.0.1:5001", max_retries=3)
     return None
 
 
-def push2web(payload, web_url="https://127.0.0.1:5001"):
+def push2web(payload, web_url="https://127.0.0.1:5000"):
     """
     将对话消息推送到本地Web服务器，支持文本和语音消息
     

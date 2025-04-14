@@ -402,7 +402,7 @@ class Robot(ABC):
                         self.cancel_current_task()  # 直接调用取消方法
 
                 
-        sio.connect('https://localhost:5001')
+        sio.connect('https://localhost:5000')
         sio.wait()
 
     async def process_text(self, text):
@@ -550,7 +550,7 @@ class Robot(ABC):
         logger.info(f"初始问话：{initial_question}")
         # 发送开始录音信号
         try:
-                response = requests.post('https://localhost:5001/start_main_recording', verify=False)
+                response = requests.post('https://localhost:5000/start_main_recording', verify=False)
                 if response.status_code == 200:
                     logger.info("已发送开始录音信号")
                 else:

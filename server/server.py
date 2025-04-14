@@ -57,7 +57,7 @@ socketio = SocketIO(
     reconnection=True,
     reconnection_attempts=5,
     reconnection_delay=1000,
-    reconnection_delay_max=5001,
+    reconnection_delay_max=5000,
     async_mode='threading'  # 在这里设置异步模式
 )
 
@@ -771,7 +771,7 @@ def generate_self_signed_cert(common_name='localhost'):
 # 修改 run 方法
 """if __name__ == '__main__':
     logger = logging.getLogger(__name__)
-    socketio.run(app, host='localhost', port=5001, debug=True)
+    socketio.run(app, host='localhost', port=5000, debug=True)
 """
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
@@ -793,12 +793,12 @@ if __name__ == '__main__':
     ssl_context = (cert_path, key_path)
     
     logger.info("启动HTTPS服务器...")
-    logger.info("服务器将在 https://0.0.0.0:5001 上运行")
+    logger.info("服务器将在 https://0.0.0.0:5000 上运行")
     
     # 启动服务器
     socketio.run(app, 
                 host='0.0.0.0', 
-                port=5001, 
+                port=5000, 
                 ssl_context=ssl_context,
                 debug=True,
                 allow_unsafe_werkzeug=True)
